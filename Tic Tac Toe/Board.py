@@ -1,4 +1,4 @@
-import numpy as np
+# import numpy as np
 
 class Board():
     def __init__(self, board = None):
@@ -30,7 +30,7 @@ class Board():
             if sum == 3:
                 self.reward = 10
                 return
-        self.reward = 0
+        self.reward = 1
 
     def generate(self):
         actions = np.zeros([sum([all(elem == [1, 0, 0]) for elem in self.board]), 9])
