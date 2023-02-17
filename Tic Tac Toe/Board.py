@@ -1,4 +1,4 @@
-# import numpy as np
+import numpy as np
 
 class Board():
     def __init__(self, board = None):
@@ -8,7 +8,7 @@ class Board():
                 self.board[i][elem] = 1
         else:
             self.board = np.full([9, 3], [1, 0, 0])
-        self.reward = 0
+        self.evaluate()
 
     def __str__(self):
         board = np.full([3, 3], "")
@@ -19,6 +19,7 @@ class Board():
 
     def move(self, action, player):
         self.board[action.argmax()] = player
+        self.evaluate()
 
     def evaluate(self):
         for (coord, change) in zip([0, 0, 0, 1, 2, 2, 3, 6], [1, 3, 4, 3, 2, 3, 1, 1]):
