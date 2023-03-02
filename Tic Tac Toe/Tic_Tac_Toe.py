@@ -13,16 +13,23 @@ def Load(fstream):
     for i, (key, val) in enumerate(data.items()):
         X[i] = np.array(json.loads(key))
         Y[i] = val
+    for i in range(i + 1, 10_000):
+        X[i] = X[i - 5_000]
+        Y[i] = Y[i - 5_000]
 
     if fstream == 'data.json':
         return
 
-    global epoch, model
+    global epoch, i, model
     model = keras.models.load_model('model.h5')
+    f = open('log.txt', 'w+')
+    log = f.read().split()
 
-    # does this work?
-    log = open('log.txt', 'r').read().split()
-    epoch = int(log[-log[::-1].index("epoch:")])
+    index = -log[::-1].index("epoch:")
+    epoch = int(log[index])
+    i = (epoch - 1) * cluster_size % data_size
+    f.write(''.join([elem + ('\n' if elem.find(':') == -1 else ' ') for elem in log[:index - 1]]))
+
     for i, elem in enumerate(log[::2]):
         if elem == "loss:":
             loss = log[i * 2 + 1]
@@ -55,18 +62,21 @@ def Test():
         elem[i] = 1
 
     for i in range(1_000):
-        actions = state.generate()
-        value = model.predict(state.scrub_all(actions), verbose = 0)
-        action = actions[value.argmax() if 50 * (actions.shape[0] - 7) < random.randrange(0, 100) else random.randrange(0, actions.shape[0])]
-        #if i % 2:
-        #    action = table[input()]
-
-        other.move(action, [0, 0, 1])
-        state.move(action, [0, 1, 0])
         print()
         print(state if i % 2 else other)
 
+        actions = state.generate()
+        value = model.predict(state.scrub_all(actions), verbose = 0)
+        action = actions[value.argmax() if random.randrange(0, 100) < 95 else random.randrange(0, actions.shape[0])]
+        if i % 2:
+            action = table[int(input())]
+
+        other.move(action, [0, 0, 1])
+        state.move(action, [0, 1, 0])
+
         if not state.generate().shape[0] or state.reward == 10:
+            print()
+            print(state if i % 2 else other)
             state = Board()
             other = Board()
         state, other = other, state
@@ -77,105 +87,126 @@ def Clear():
 
 def Synthesize():
     print("\nSynthesizing Data")
-    state, other = Board(), Board()
-    i = 0
-    while i < 2_500:
-        reward = state.reward
-        actions = state.generate()
-        action = actions[random.randrange(0, actions.shape[0])]
-        X[i] = state.scrub(action)
-
-        other.move(action, [0, 0, 1])
-        state.move(action, [0, 1, 0])
-    
-        if not state.generate().shape[0] or state.reward == 10:
-            if state.reward == 10:
-                if not X[i].tolist() in X[:i].tolist():
-                    Y[i] = Y[i + 2_500] = Y[i + 5_000] = Y[i + 7_500] = reward + discount * state.reward
-                    i += 1
-
-            state = Board()
-            other = Board()
-        else:
-            state, other = other, state
-    
-    Save('data.json')
-
-discount = 0.85
-data_size = 10_000
-shape = Board().scrub_all(Board().generate()).shape[1]
-X = np.zeros([data_size, shape], dtype = np.int8)
-Y = np.zeros([data_size], dtype = np.float32)
-
-#Test()
-Load('data.json')
-#Load('buffer.json')
-Clear()
-
-model = keras.Sequential([
-        keras.layers.Dense(81, activation = 'relu',
-                            input_shape = [shape]),
-        keras.layers.Dense(64, activation = 'relu'),
-        keras.layers.Dense(49, activation = 'relu'),
-        keras.layers.Dense(36, activation = 'relu'),
-        keras.layers.Dense(25, activation = 'relu'),
-        keras.layers.Dense(16, activation = 'relu'),
-        keras.layers.Dense(9, activation = 'relu'),
-        keras.layers.Dense(4, activation = 'relu'),
-        keras.layers.Dense(1)])
-model.compile(optimizer = 'adam', loss = 'mse')
-model.summary()
-
-Time = time.time()
-epoch = 1
-#Synthesize()
-model.fit(X, Y, batch_size = 64, epochs = 100, verbose = 0)
-
-print("start program")
-for epoch in range(epoch, 1_000):
-    Save('buffer.json')
-    i = 0
-    while i < data_size:
-        # simulate environment
-        state, other = Board(), Board()
-        if epoch < 9:
+    for epoch in range(1, 11):
+        i = 0
+        while i < data_size * epoch // 10:
             history = []
-            while state.generate().shape[0] and state.reward != 10:
+            state, other = Board(), Board()
+            actions = state.generate()
+            while actions.shape[0] and state.reward != 10:
                 state, other = other, state
-                actions = state.generate()
                 action = actions[random.randrange(0, actions.shape[0])]
                 history.append(action)
 
                 other.move(action, [0, 0, 1])
                 state.move(action, [0, 1, 0])
+                actions = state.generate()
+                if epoch == 10:
+                    break
+            else:
+                for elem in history[:-1 - epoch:-1]:
+                    other.move(elem, [1, 0, 0])
+                    state.move(elem, [1, 0, 0])
+                actions = state.generate()
+            
+            value = model.predict(state.scrub_all(actions), verbose = 0)
+            for i in range(epoch):
+                reward = state.reward
+                action = actions[random.randrange(0, actions.shape[0])]
+                X[i] = state.scrub(action)
 
-            for elem in history[:-1 - epoch:-1]:
-                other.move(elem, [1, 0, 0])
-                state.move(elem, [1, 0, 0])
+                other.move(action, [0, 0, 1])
+                state.move(action, [0, 1, 0])
+                actions = state.generate()
+    
+                if not actions.shape[0] or state.reward == 10:
+                    Y[i - 1] = reward + discount * other.reward
+                    Y[i] = reward + discount * state.reward
+                    i += 1
+                    break
+                else:
+                    state, other = other, state
+                    value = model.predict(state.scrub_all(actions), verbose = 0)
+                    if actions.shape[0] < 8:
+                        Y[i - 1] = reward + discount * value.max()
+                    i += 1
+    
+    Save('data.json')
 
+epoch = 1
+discount = 0.85
+data_size = 10_000
+cluster_size = 1_000
+shape = Board().scrub_all(Board().generate()).shape[1]
+X = np.zeros([data_size, shape], dtype = np.int8)
+Y = np.zeros([data_size], dtype = np.float32)
+
+#Test()
+#Load('data.json')
+Clear()
+
+model = keras.Sequential([
+        keras.layers.Dense(125, activation = 'relu',
+                            input_shape = [shape]),
+        keras.layers.Dense(125, activation = 'relu'),
+        keras.layers.Dense(125, activation = 'relu'),
+        keras.layers.Dense(125, activation = 'relu'),
+        keras.layers.Dense(125, activation = 'relu'),
+        keras.layers.Dense(125, activation = 'relu'),
+        keras.layers.Dense(125, activation = 'relu'),
+        keras.layers.Dense(25, activation = 'relu'),
+        keras.layers.Dense(5, activation = 'relu'),
+        keras.layers.Dense(1)])
+model.compile(optimizer = 'adam', loss = 'mse')
+model.summary()
+model.fit(X, Y, batch_size = 64, epochs = 100, verbose = 0)
+Time = time.time()
+sentries = [model] * 100
+
+#Load('buffer.json')
+Synthesize()
+print("start program")
+for epoch in range(epoch, 1_000):
+    Save('buffer.json')
+
+    if i == data_size:
+        i = lim = 0
+    lim += cluster_size
+    while i < lim:
+        # simulate environment
+        state, other = Board(), Board()
+        paragon = sentries[random.randrange(0, min(epoch, 100))]
+        flag = True
+        if random.randrange(0, 1):
+            flag = False
+            actions = state.generate()
+            action = actions[random.randrange(0, actions.shape[0])]
+            other.move(action, [0, 0, 1])
+            state.move(action, [0, 1, 0])
+
+        # replay buffer
         actions = state.generate()
         value = model.predict(state.scrub_all(actions), verbose = 0)
-        for freedom in range(min(epoch, data_size - i)):
+        for temp in range(min(epoch, data_size - 1 - i)):
             reward = state.reward
             action = actions[value.argmax() if random.randrange(0, 100) < 95 else random.randrange(0, actions.shape[0])]
             X[i] = state.scrub(action)
 
             other.move(action, [0, 0, 1])
             state.move(action, [0, 1, 0])
+            actions = state.generate()
 
-            # replay buffer
-            if not state.generate().shape[0] or state.reward == 10:
-                Y[i] = reward + discount * state.reward
-                i += 1
-                break
-            else:
-                Y[i] = state.reward + discount * np.amax(value)
+            if not actions.shape[0] or state.reward == 10:
+                Y[i] = reward + discount * TheOne.reward if flag else state.reward
+            elif flag:
                 state, other = other, state
-                actions = state.generate()
-                value = model.predict(state.scrub_all(actions), verbose = 0)
-                i += 1
+                value = (model if flag else paragon).predict(state.scrub_all(actions), verbose = 0)
+                if actions.shape[0] < 8:
+                    Y[i] = reward + discount * value.max()
+            flag = not flag
 
             # train model
+            i += 1# i += flag
             if not i % 100:
                 Qnew = keras.models.clone_model(model)
                 Qnew.compile(optimizer = 'adam', loss = 'mse')
@@ -185,3 +216,6 @@ for epoch in range(epoch, 1_000):
                 text = f"loss: {loss}"
                 open('log.txt', 'a').write(text + '\n')
                 print(text)
+
+            if not actions.shape[0] or state.reward == 10:
+                break
