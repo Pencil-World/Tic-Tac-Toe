@@ -10,12 +10,12 @@ def Load(fstream):
     print("\nLoading Data")
 
     data = json.load(open(fstream, 'r'))
-    for i, (key, val) in enumerate(data.items()):
-        X[i] = np.array(json.loads(key))
-        Y[i] = val
-    for i in range(i + 1, 10_000):
-        X[i] = X[i - 5_000]
-        Y[i] = Y[i - 5_000]
+    for _i, (key, val) in enumerate(data.items()):
+        X[_i] = np.array(json.loads(key))
+        Y[_i] = val
+    for _i in range(_i + 1, 10_000):
+        X[_i] = X[_i - 5_000]
+        Y[_i] = Y[_i - 5_000]
 
     if fstream == 'data.json':
         return
@@ -101,7 +101,8 @@ def Synthesize():
                 other.move(action, [0, 0, 1])
                 state.move(action, [0, 1, 0])
                 actions = state.generate()
-                if epoch == 10:
+                if epoch == 10:# swap before break
+                    state, other = other, state
                     break
             else:
                 for elem in history[:-1 - epoch:-1]:
@@ -109,28 +110,31 @@ def Synthesize():
                     state.move(elem, [1, 0, 0])
                 actions = state.generate()
             
+            isModel = True
             value = model.predict(state.scrub_all(actions), verbose = 0)
             for i in range(epoch):
-                reward = state.reward
                 action = actions[random.randrange(0, actions.shape[0])]
-                X[i] = state.scrub(action)
+                if isModel:
+                    reward = state.reward
+                    X[i] = state.scrub(action)
 
                 other.move(action, [0, 0, 1])
                 state.move(action, [0, 1, 0])
                 actions = state.generate()
     
                 if not actions.shape[0] or state.reward == 10:
-                    Y[i - 1] = reward + discount * other.reward
-                    Y[i] = reward + discount * state.reward
+                    Y[i] = reward + discount * (state.reward if isModel else other.reward)
                     i += 1
                     break
                 else:
                     state, other = other, state
-                    value = model.predict(state.scrub_all(actions), verbose = 0)
-                    if actions.shape[0] < 8:
-                        Y[i - 1] = reward + discount * value.max()
-                    i += 1
-    
+                    isModel = not isModel
+                    value = (model if isModel else paragon).predict(state.scrub_all(actions), verbose = 0)
+                    if model:
+                        if actions.shape[0] < 8:
+                            Y[i] = reward + discount * value.max()
+                        i += 1
+
     Save('data.json')
 
 epoch = 1
@@ -188,17 +192,17 @@ for epoch in range(epoch, 1_000):
         actions = state.generate()
         value = model.predict(state.scrub_all(actions), verbose = 0)
         for temp in range(min(epoch, data_size - i)):
-            action = actions[value.argmax() if random.randrange(0, 100) < 95 else random.randrange(0, actions.shape[0])]
+            action = actions[value.argmax() if random.randrange(0, 100) < 9 else random.randrange(0, actions.shape[0])]
             if isModel:
-                X[i] = state.scrub(action)
                 reward = state.reward
+                X[i] = state.scrub(action)
 
             other.move(action, [0, 0, 1])
             state.move(action, [0, 1, 0])
             actions = state.generate()
 
             if not actions.shape[0] or state.reward == 10:
-                Y[i] = reward + discount * other.reward if isModel else state.reward
+                Y[i] = reward + discount * (state.reward if isModel else other.reward)
                 i += 1
             else:
                 state, other = other, state
@@ -222,3 +226,8 @@ for epoch in range(epoch, 1_000):
 
             if not actions.shape[0] or state.reward == 10:
                 break
+
+    if epoch < 100:
+        sentries[epoch] = keras.models.clone_model(model)
+        sentries[epoch].set_weights(model.get_weights())
+        sentries[epoch].compile(optimizer = 'adam', loss = 'mse')
