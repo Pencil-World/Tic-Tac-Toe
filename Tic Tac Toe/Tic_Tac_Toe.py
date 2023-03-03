@@ -134,6 +134,7 @@ def Synthesize():
     Save('data.json')
 
 epoch = 1
+i = lim = 0
 discount = 0.85
 data_size = 10_000
 cluster_size = 1_000
@@ -176,38 +177,40 @@ for epoch in range(epoch, 1_000):
         # simulate environment
         state, other = Board(), Board()
         paragon = sentries[random.randrange(0, min(epoch, 100))]
-        flag = True
-        if random.randrange(0, 1):
-            flag = False
+        isModel = True
+        if random.randint(0, 1):
             actions = state.generate()
             action = actions[random.randrange(0, actions.shape[0])]
-            other.move(action, [0, 0, 1])
-            state.move(action, [0, 1, 0])
+            other.move(action, [0, 1, 0])
+            state.move(action, [0, 0, 1])
 
         # replay buffer
         actions = state.generate()
         value = model.predict(state.scrub_all(actions), verbose = 0)
-        for temp in range(min(epoch, data_size - 1 - i)):
-            reward = state.reward
+        for temp in range(min(epoch, data_size - i)):
             action = actions[value.argmax() if random.randrange(0, 100) < 95 else random.randrange(0, actions.shape[0])]
-            X[i] = state.scrub(action)
+            if isModel:
+                X[i] = state.scrub(action)
+                reward = state.reward
 
             other.move(action, [0, 0, 1])
             state.move(action, [0, 1, 0])
             actions = state.generate()
 
             if not actions.shape[0] or state.reward == 10:
-                Y[i] = reward + discount * TheOne.reward if flag else state.reward
-            elif flag:
+                Y[i] = reward + discount * other.reward if isModel else state.reward
+                i += 1
+            else:
                 state, other = other, state
-                value = (model if flag else paragon).predict(state.scrub_all(actions), verbose = 0)
-                if actions.shape[0] < 8:
-                    Y[i] = reward + discount * value.max()
-            flag = not flag
+                isModel = not isModel
+                value = (model if isModel else paragon).predict(state.scrub_all(actions), verbose = 0)
+                if model:
+                    if actions.shape[0] < 8:
+                        Y[i] = reward + discount * value.max()
+                    i += 1
 
             # train model
-            i += 1# i += flag
-            if not i % 100:
+            if isModel and not i % 100:
                 Qnew = keras.models.clone_model(model)
                 Qnew.compile(optimizer = 'adam', loss = 'mse')
                 loss = Qnew.fit(X, Y, batch_size = 64, epochs = 100, verbose = 0).history['loss'][-1]
