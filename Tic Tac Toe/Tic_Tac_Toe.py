@@ -101,19 +101,19 @@ def Synthesize():
                 other.move(action, [0, 0, 1])
                 state.move(action, [0, 1, 0])
                 actions = state.generate()
-                if epoch == 10:# swap before break
-                    state, other = other, state
-                    break
             else:
                 for elem in history[:-1 - epoch:-1]:
                     other.move(elem, [1, 0, 0])
                     state.move(elem, [1, 0, 0])
+                if len(history) % 2:
+                    state, other = other, state
                 actions = state.generate()
-            
+                
+            print(state)
             isModel = True
             value = model.predict(state.scrub_all(actions), verbose = 0)
             for i in range(epoch):
-                action = actions[random.randrange(0, actions.shape[0])]
+                action = actions[value.argmax() if isModel else random.randrange(0, actions.shape[0])]
                 if isModel:
                     reward = state.reward
                     X[i] = state.scrub(action)
@@ -129,10 +129,9 @@ def Synthesize():
                 else:
                     state, other = other, state
                     isModel = not isModel
-                    value = (model if isModel else paragon).predict(state.scrub_all(actions), verbose = 0)
                     if model:
-                        if actions.shape[0] < 8:
-                            Y[i] = reward + discount * value.max()
+                        value = model.predict(state.scrub_all(actions), verbose = 0)
+                        Y[i] = reward + discount * value.max()
                         i += 1
 
     Save('data.json')
@@ -209,8 +208,7 @@ for epoch in range(epoch, 1_000):
                 isModel = not isModel
                 value = (model if isModel else paragon).predict(state.scrub_all(actions), verbose = 0)
                 if model:
-                    if actions.shape[0] < 8:
-                        Y[i] = reward + discount * value.max()
+                    Y[i] = reward + discount * value.max()
                     i += 1
 
             # train model
