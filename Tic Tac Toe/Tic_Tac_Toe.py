@@ -27,20 +27,15 @@ def Load(fstream):
 
     index = -log[::-1].index("epoch:")
     epoch = int(log[index])
-    i = (epoch - 1) * cluster_size % data_size
+    i = lim = (epoch - 1) * cluster_size % data_size
     f.write(''.join([elem + ('\n' if elem.find(':') == -1 else ' ') for elem in log[:index - 1]]))
-
-    for i, elem in enumerate(log[::2]):
-        if elem == "loss:":
-            loss = log[i * 2 + 1]
-            print(f"loss: {'x' * min(100, int(loss // 4))}")
 
 def Save(fstream):
     print("\nSaving Data")
    
-    JSON = dict()
-    for i in range(data_size):
-        JSON[np.array2string(X[i], separator = ", ", max_line_width = 1_000)] = float(Y[i])
+    JSON = dict(zip([repr(elem.tolist()) for elem in X], Y))
+    #for i in range(data_size):
+    #    JSON[np.array2string(X[i], separator = ", ", max_line_width = 1_000)] = float(Y[i])
     json.dump(JSON, open(fstream, 'w'), indent = 4)
 
     if fstream == 'data.json':
@@ -87,8 +82,9 @@ def Clear():
 
 def Synthesize():
     print("\nSynthesizing Data")
+    i = 0
     for epoch in range(1, 11):
-        i = 0
+        print(f"epoch: {epoch} time: {time.time() - Time}")
         while i < data_size * epoch // 10:
             history = []
             state, other = Board(), Board()
@@ -102,17 +98,21 @@ def Synthesize():
                 state.move(action, [0, 1, 0])
                 actions = state.generate()
             else:
+                if not min(epoch, 9) % 2:
+                    state, other = other, state
                 for elem in history[:-1 - epoch:-1]:
                     other.move(elem, [1, 0, 0])
                     state.move(elem, [1, 0, 0])
-                if len(history) % 2:
-                    state, other = other, state
+                if len(history) < epoch and random.randint(0, 1):
+                    actions = state.generate()
+                    action = actions[random.randrange(0, actions.shape[0])]
+                    other.move(action, [0, 1, 0])
+                    state.move(action, [0, 0, 1])
                 actions = state.generate()
                 
-            print(state)
             isModel = True
             value = model.predict(state.scrub_all(actions), verbose = 0)
-            for i in range(epoch):
+            for temp in range(min(epoch, data_size - i)):
                 action = actions[value.argmax() if isModel else random.randrange(0, actions.shape[0])]
                 if isModel:
                     reward = state.reward
@@ -129,7 +129,7 @@ def Synthesize():
                 else:
                     state, other = other, state
                     isModel = not isModel
-                    if model:
+                    if isModel:
                         value = model.predict(state.scrub_all(actions), verbose = 0)
                         Y[i] = reward + discount * value.max()
                         i += 1
