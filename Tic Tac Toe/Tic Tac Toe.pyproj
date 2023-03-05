@@ -26,6 +26,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="buffer.json" />
+    <Content Include="debugger.txt" />
     <Content Include="log.txt" />
     <Content Include="model.h5" />
     <Content Include="data.json" />

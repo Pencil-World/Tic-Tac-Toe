@@ -7,44 +7,48 @@ import random
 import time
 
 def Load(fstream):
-    print("\nLoading Data")
+    debugger.write("Loading Data\n")
+    global epoch, i, lim, model
 
     data = json.load(open(fstream, 'r'))
     for _i, (key, val) in enumerate(data.items()):
         X[_i] = np.array(json.loads(key))
         Y[_i] = val
-    for _i in range(_i + 1, 10_000):
-        X[_i] = X[_i - 5_000]
-        Y[_i] = Y[_i - 5_000]
+    for it, _i in enumerate(range(_i + 1, data_size)):
+        X[_i] = X[it]
+        Y[_i] = Y[it]
 
     if fstream == 'data.json':
+        model.compile(optimizer = 'adam', loss = 'mse')
+        model.fit(X, Y, batch_size = 64, epochs = 150, verbose = 0)
         return
 
-    global epoch, i, model
-    model = keras.models.load_model('model.h5')
-    f = open('log.txt', 'w+')
+    f = open('log.txt', 'r')
     log = f.read().split()
+    f.close()
 
+    model = keras.models.load_model('model.h5')
     index = -log[::-1].index("epoch:")
     epoch = int(log[index])
     i = lim = (epoch - 1) * cluster_size % data_size
+
+    f = open('log.txt', 'w')
     f.write(''.join([elem + ('\n' if elem.find(':') == -1 else ' ') for elem in log[:index - 1]]))
+    f.close()
 
 def Save(fstream):
-    print("\nSaving Data")
+    debugger.write("Saving Data\n")
    
     JSON = dict(zip([repr(elem.tolist()) for elem in X], Y))
-    #for i in range(data_size):
-    #    JSON[np.array2string(X[i], separator = ", ", max_line_width = 1_000)] = float(Y[i])
     json.dump(JSON, open(fstream, 'w'), indent = 4)
 
     if fstream == 'data.json':
         return
 
     model.save('model.h5')
-    text = f"epoch: {epoch} time: {time.time() - Time}"
-    open('log.txt', 'a').write(text + '\n')
-    print(text)
+    text = f"epoch: {epoch} time: {time.time() - Time}\n"
+    open('log.txt', 'a').write(text)
+    debugger.write(text)
 
 def Test():
     print("\nTest")
@@ -81,73 +85,49 @@ def Clear():
     open('buffer.json', 'w').close()
 
 def Synthesize():
-    print("\nSynthesizing Data")
+    print("Synthesizing Data")
     i = 0
-    for epoch in range(1, 11):
-        print(f"epoch: {epoch} time: {time.time() - Time}")
-        while i < data_size * epoch // 10:
-            history = []
-            state, other = Board(), Board()
+    while True:
+        history = []
+        state, other = Board(), Board()
+        actions = state.generate()
+        while actions.shape[0] and state.reward != 10:
+            state, other = other, state
+            action = actions[random.randrange(0, actions.shape[0])]
+            history.append(action)
+
+            other.move(action, [0, 0, 1])
+            state.move(action, [0, 1, 0])
             actions = state.generate()
-            while actions.shape[0] and state.reward != 10:
-                state, other = other, state
-                action = actions[random.randrange(0, actions.shape[0])]
-                history.append(action)
 
-                other.move(action, [0, 0, 1])
-                state.move(action, [0, 1, 0])
-                actions = state.generate()
-            else:
-                if not min(epoch, 9) % 2:
-                    state, other = other, state
-                for elem in history[:-1 - epoch:-1]:
-                    other.move(elem, [1, 0, 0])
-                    state.move(elem, [1, 0, 0])
-                if len(history) < epoch and random.randint(0, 1):
-                    actions = state.generate()
-                    action = actions[random.randrange(0, actions.shape[0])]
-                    other.move(action, [0, 1, 0])
-                    state.move(action, [0, 0, 1])
-                actions = state.generate()
-                
-            isModel = True
-            value = model.predict(state.scrub_all(actions), verbose = 0)
-            for temp in range(min(epoch, data_size - i)):
-                action = actions[value.argmax() if isModel else random.randrange(0, actions.shape[0])]
-                if isModel:
-                    reward = state.reward
-                    X[i] = state.scrub(action)
+        for it, elem in enumerate(history[::-1]):
+            reward = state.reward
+            other.move(elem, [1, 0, 0])
+            state.move(elem, [1, 0, 0])
 
-                other.move(action, [0, 0, 1])
-                state.move(action, [0, 1, 0])
-                actions = state.generate()
-    
-                if not actions.shape[0] or state.reward == 10:
-                    Y[i] = reward + discount * (state.reward if isModel else other.reward)
-                    i += 1
-                    break
-                else:
-                    state, other = other, state
-                    isModel = not isModel
-                    if isModel:
-                        value = model.predict(state.scrub_all(actions), verbose = 0)
-                        Y[i] = reward + discount * value.max()
-                        i += 1
+            X[i] = state.scrub(action)
+            Y[i] = state.reward + discount * (reward if it < 2 else Y[i - 2])
 
-    Save('data.json')
+            state, other = other, state
+            i += 1
+            if not i % 100:
+                print(Y[i - 100:i])
+                if i == data_size:
+                    Save('data.json')
+                    return
 
+debugger = open('debugger.txt', 'w')
+Time = time.time()
 epoch = 1
 i = lim = 0
+sentries = [None] * 100
+
 discount = 0.85
 data_size = 10_000
 cluster_size = 1_000
 shape = Board().scrub_all(Board().generate()).shape[1]
 X = np.zeros([data_size, shape], dtype = np.int8)
-Y = np.zeros([data_size], dtype = np.float32)
-
-#Test()
-#Load('data.json')
-Clear()
+Y = np.zeros([data_size], dtype = np.float64)
 
 model = keras.Sequential([
         keras.layers.Dense(125, activation = 'relu',
@@ -161,18 +141,21 @@ model = keras.Sequential([
         keras.layers.Dense(25, activation = 'relu'),
         keras.layers.Dense(5, activation = 'relu'),
         keras.layers.Dense(1)])
-model.compile(optimizer = 'adam', loss = 'mse')
 model.summary()
-model.fit(X, Y, batch_size = 64, epochs = 100, verbose = 0)
-Time = time.time()
-sentries = [model] * 100
 
+#Test()
+#Load('data.json')
+#Clear()
 #Load('buffer.json')
 Synthesize()
-print("start program")
+
+debugger.write("start program\n")
 for epoch in range(epoch, 1_000):
     Save('buffer.json')
 
+    if epoch <= 100:
+        sentries[epoch - 1] = keras.models.clone_model(model)
+        sentries[epoch - 1].set_weights(model.get_weights())
     if i == data_size:
         i = lim = 0
     lim += cluster_size
@@ -190,8 +173,8 @@ for epoch in range(epoch, 1_000):
         # replay buffer
         actions = state.generate()
         value = model.predict(state.scrub_all(actions), verbose = 0)
-        for temp in range(min(epoch, data_size - i)):
-            action = actions[value.argmax() if random.randrange(0, 100) < 9 else random.randrange(0, actions.shape[0])]
+        for temp in range(data_size - i + 1):
+            action = actions[value.argmax() if random.randrange(0, 100) < 95 else random.randrange(0, actions.shape[0])]
             if isModel:
                 reward = state.reward
                 X[i] = state.scrub(action)
@@ -207,7 +190,7 @@ for epoch in range(epoch, 1_000):
                 state, other = other, state
                 isModel = not isModel
                 value = (model if isModel else paragon).predict(state.scrub_all(actions), verbose = 0)
-                if model:
+                if isModel:
                     Y[i] = reward + discount * value.max()
                     i += 1
 
@@ -215,17 +198,13 @@ for epoch in range(epoch, 1_000):
             if isModel and not i % 100:
                 Qnew = keras.models.clone_model(model)
                 Qnew.compile(optimizer = 'adam', loss = 'mse')
-                loss = Qnew.fit(X, Y, batch_size = 64, epochs = 100, verbose = 0).history['loss'][-1]
+                loss = Qnew.fit(X, Y, batch_size = 64, epochs = 150, verbose = 0).history['loss'][-1]
                 model.set_weights(0.9 * np.array(model.get_weights(), dtype = object) + 0.1 * np.array(Qnew.get_weights(), dtype = object))
 
-                text = f"loss: {loss}"
-                open('log.txt', 'a').write(text + '\n')
-                print(text)
+                text = f"loss: {loss}\n"
+                open('log.txt', 'a').write(text)
+                debugger.write(text)
+                debugger.flush()
 
             if not actions.shape[0] or state.reward == 10:
                 break
-
-    if epoch < 100:
-        sentries[epoch] = keras.models.clone_model(model)
-        sentries[epoch].set_weights(model.get_weights())
-        sentries[epoch].compile(optimizer = 'adam', loss = 'mse')
