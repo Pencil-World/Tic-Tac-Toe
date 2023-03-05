@@ -7,7 +7,8 @@ import random
 import time
 
 def Load(fstream):
-    debugger.write("Loading Data\n")
+    with open('debugger.txt', 'a') as debugger:
+        debugger.write("Loading Data\n")
     global epoch, i, lim, model
 
     data = json.load(open(fstream, 'r'))
@@ -37,18 +38,19 @@ def Load(fstream):
     f.close()
 
 def Save(fstream):
-    debugger.write("Saving Data\n")
+    with open('debugger.txt', 'a') as debugger:
+        debugger.write("Saving Data\n")
    
-    JSON = dict(zip([repr(elem.tolist()) for elem in X], Y))
-    json.dump(JSON, open(fstream, 'w'), indent = 4)
+        JSON = dict(zip([repr(elem.tolist()) for elem in X], Y))
+        json.dump(JSON, open(fstream, 'w'), indent = 4)
 
-    if fstream == 'data.json':
-        return
+        if fstream == 'data.json':
+            return
 
-    model.save('model.h5')
-    text = f"epoch: {epoch} time: {time.time() - Time}\n"
-    open('log.txt', 'a').write(text)
-    debugger.write(text)
+        model.save('model.h5')
+        text = f"epoch: {epoch} time: {time.time() - Time}\n"
+        open('log.txt', 'a').write(text)
+        debugger.write(text)
 
 def Test():
     print("\nTest")
@@ -100,10 +102,10 @@ def Synthesize():
             state.move(action, [0, 1, 0])
             actions = state.generate()
 
-        for it, elem in enumerate(history[::-1]):
+        for it, action in enumerate(history[::-1]):
             reward = state.reward
-            other.move(elem, [1, 0, 0])
-            state.move(elem, [1, 0, 0])
+            other.move(action, [1, 0, 0])
+            state.move(action, [1, 0, 0])
 
             X[i] = state.scrub(action)
             Y[i] = state.reward + discount * (reward if it < 2 else Y[i - 2])
@@ -116,7 +118,7 @@ def Synthesize():
                     Save('data.json')
                     return
 
-debugger = open('debugger.txt', 'w')
+open('debugger.txt', 'w').close()
 Time = time.time()
 epoch = 1
 i = lim = 0
@@ -144,12 +146,13 @@ model = keras.Sequential([
 model.summary()
 
 #Test()
-#Load('data.json')
-#Clear()
+Load('data.json')
+Clear()
 #Load('buffer.json')
-Synthesize()
+#Synthesize()
 
-debugger.write("start program\n")
+with open('debugger.txt', 'a') as debugger:
+    debugger.write("start program\n")
 for epoch in range(epoch, 1_000):
     Save('buffer.json')
 
@@ -159,6 +162,7 @@ for epoch in range(epoch, 1_000):
     if i == data_size:
         i = lim = 0
     lim += cluster_size
+    WinLossRatio = [0, 0]
     while i < lim:
         # simulate environment
         state, other = Board(), Board()
@@ -184,6 +188,7 @@ for epoch in range(epoch, 1_000):
             actions = state.generate()
 
             if not actions.shape[0] or state.reward == 10:
+                WinLossRatio[not isModel] += 1
                 Y[i] = reward + discount * (state.reward if isModel else other.reward)
                 i += 1
             else:
@@ -203,8 +208,11 @@ for epoch in range(epoch, 1_000):
 
                 text = f"loss: {loss}\n"
                 open('log.txt', 'a').write(text)
-                debugger.write(text)
-                debugger.flush()
+                with open('debugger.txt', 'a') as debugger:
+                    debugger.write(text)
 
             if not actions.shape[0] or state.reward == 10:
                 break
+
+    with open('debugger.txt', 'a') as debugger:
+        debugger.write(f"win to loss ratio (in percent): {WinLossRatio[0] * 100 / WinLossRatio[1]}\n")
