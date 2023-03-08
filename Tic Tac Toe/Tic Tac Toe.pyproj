@@ -25,12 +25,21 @@
     <Compile Include="Tic_Tac_Toe.py" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="0.h5" />
+    <Content Include="1.h5" />
+    <Content Include="2.h5" />
+    <Content Include="3.h5" />
+    <Content Include="4.h5" />
+    <Content Include="5.h5" />
+    <Content Include="6.h5" />
+    <Content Include="7.h5" />
+    <Content Include="8.h5" />
+    <Content Include="9.h5" />
     <Content Include="buffer.json" />
     <Content Include="debugger.txt" />
     <Content Include="log.txt" />
     <Content Include="model.h5" />
     <Content Include="data.json" />
-    <Content Include="sentries.json" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

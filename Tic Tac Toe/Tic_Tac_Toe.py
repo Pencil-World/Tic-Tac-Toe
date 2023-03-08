@@ -38,8 +38,8 @@ def Load(fstream):
     f.write(''.join([elem + ('\n' if elem.find(':') == -1 else ' ') for elem in log[:index - 1]]))
     f.close()
 
-    for i, elem in enumerate(json.load(open('sentries.json', 'r'))):
-        sentries[i] = keras.models.model_from_json(elem)
+    for _i in range(10):
+        sentries[_i] = keras.models.load_model(str(_i) + '.h5')
 
 def Save(fstream):
     with open('debugger.txt', 'a') as debugger:
@@ -56,7 +56,8 @@ def Save(fstream):
         open('log.txt', 'a').write(text)
         debugger.write(text)
 
-    json.dump([elem.to_json() for elem in sentries], open('sentries.json', 'w'), indent = 4)
+    for _i in range(10):
+        sentries[_i].save(str(_i) + '.h5')
 
 def Test():
     print("\nTest")
@@ -156,13 +157,13 @@ Load('data.json')
 Clear()
 #Load('buffer.json')
 #Synthesize()
-
+# differentiate between playing first and playing second. 2 different sets of models. like how black going first in go is a benefit. and white gets a handicap. 
 with open('debugger.txt', 'a') as debugger:
     debugger.write("start program\n")
 for epoch in range(epoch, 1_000):
     Save('buffer.json')
 
-    sentries = sentries[n:] + sentries[:n]
+    sentries = sentries[1:] + sentries[:1]
     sentries[0] = keras.models.clone_model(model)
     sentries[0].set_weights(model.get_weights())
 
