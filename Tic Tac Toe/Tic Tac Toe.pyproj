@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>7664f4af-1210-40a4-b52f-f210ed5f6e48</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>Tic_Tac_Toe.py</StartupFile>
+    <StartupFile>Monte Carlo.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,7 +22,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Board.py" />
-    <Compile Include="Tic_Tac_Toe.py" />
+    <Compile Include="Monte Carlo.py" />
+    <Compile Include="Multi-Agent.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="0.h5" />

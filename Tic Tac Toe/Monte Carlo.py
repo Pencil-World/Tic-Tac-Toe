@@ -1,5 +1,5 @@
 from Board import Board
-import copy
+import datetime
 import json
 from tensorflow import keras
 import numpy as np
@@ -38,8 +38,8 @@ def Load(fstream):
     f.write(''.join([elem + ('\n' if elem.find(':') == -1 else ' ') for elem in log[:index - 1]]))
     f.close()
 
-    for _i in range(10):
-        sentries[_i] = keras.models.load_model(str(_i) + '.h5')
+    #for _i in range(10):
+    #    sentries[_i] = keras.models.load_model(str(_i) + '.h5')
 
 def Save(fstream):
     with open('debugger.txt', 'a') as debugger:
@@ -52,12 +52,12 @@ def Save(fstream):
             return
 
         model.save('model.h5')
-        text = f"epoch: {epoch} time: {time.time() - Time}\n"
+        text = f"epoch: {epoch}\ntime: {time.time() - Time}\n"
         open('log.txt', 'a').write(text)
         debugger.write(text)
 
-    for _i in range(10):
-        sentries[_i].save(str(_i) + '.h5')
+    #for _i in range(10):
+    #    sentries[_i].save(str(_i) + '.h5')
 
 def Test():
     print("\nTest")
@@ -130,7 +130,7 @@ i = lim = 0
 sentries = [None] * 10
 
 discount = 0.85
-data_size = 10_000
+data_size = 50_000
 cluster_size = 1_000
 shape = Board().scrub_all(Board().generate()).shape[1]
 X = np.zeros([data_size, shape], dtype = np.int8)
@@ -157,15 +157,15 @@ Load('data.json')
 Clear()
 #Load('buffer.json')
 #Synthesize()
-# differentiate between playing first and playing second. 2 different sets of models. like how black going first in go is a benefit. and white gets a handicap. 
+# multi agent reinforcement learning or stochiactic environment. differentiate between playing first and playing second. 2 different sets of models. like how black going first in go is a benefit. and white gets a handicap. 
 with open('debugger.txt', 'a') as debugger:
     debugger.write("start program\n")
 for epoch in range(epoch, 1_000):
     Save('buffer.json')
 
-    sentries = sentries[1:] + sentries[:1]
-    sentries[0] = keras.models.clone_model(model)
-    sentries[0].set_weights(model.get_weights())
+    #sentries = sentries[1:] + sentries[:1]
+    #sentries[0] = keras.models.clone_model(model)
+    #sentries[0].set_weights(model.get_weights())
 
     if i == data_size:
         i = lim = 0
@@ -174,7 +174,7 @@ for epoch in range(epoch, 1_000):
     while i < lim:
         # simulate environment
         state, other = Board(), Board()
-        paragon = sentries[random.randrange(0, min(epoch, 10))]
+        #paragon = sentries[random.randrange(0, min(epoch, 10))]
         isModel = True
         if random.randint(0, 1):
             actions = state.generate()
@@ -186,7 +186,8 @@ for epoch in range(epoch, 1_000):
         actions = state.generate()
         value = model.predict(state.scrub_all(actions), verbose = 0)
         for temp in range(data_size - i + 1):
-            action = actions[value.argmax() if random.randrange(0, 100) < 90 else random.randrange(0, actions.shape[0])]
+            action = actions[value.argmax() if random.randrange(0, 100) < min(95, epoch * 100 // 25) and isModel else random.randrange(0, actions.shape[0])]
+            #action = actions[value.argmax() if random.randrange(0, 100) < 90 else random.randrange(0, actions.shape[0])]
             if isModel:
                 reward = state.reward
                 X[i] = state.scrub(action)
@@ -204,8 +205,9 @@ for epoch in range(epoch, 1_000):
             else:
                 state, other = other, state
                 isModel = not isModel
-                value = (model if isModel else paragon).predict(state.scrub_all(actions), verbose = 0)
+                #value = (model if isModel else paragon).predict(state.scrub_all(actions), verbose = 0)
                 if isModel:
+                    value = model.predict(state.scrub_all(actions), verbose = 0)
                     Y[i] = reward + discount * value.max()
                     flag = True
 
@@ -217,10 +219,10 @@ for epoch in range(epoch, 1_000):
                 loss = Qnew.fit(X, Y, batch_size = 64, epochs = 100, verbose = 0).history['loss'][-1]
                 model.set_weights(0.9 * np.array(model.get_weights(), dtype = object) + 0.1 * np.array(Qnew.get_weights(), dtype = object))
 
-                text = f"loss: {loss}\n"
+                text = f"loss: {loss} time: {time.time() - Time}\n"
                 open('log.txt', 'a').write(text)
                 with open('debugger.txt', 'a') as debugger:
-                    debugger.write(text)
+                    debugger.write(f"{datetime.datetime.now()} " + text)
 
             if not actions.shape[0] or state.reward == 10:
                 break
