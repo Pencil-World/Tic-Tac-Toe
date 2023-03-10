@@ -38,9 +38,6 @@ def Load(fstream):
     f.write(''.join([elem + ('\n' if elem.find(':') == -1 else ' ') for elem in log[:index - 1]]))
     f.close()
 
-    #for _i in range(10):
-    #    sentries[_i] = keras.models.load_model(str(_i) + '.h5')
-
 def Save(fstream):
     with open('debugger.txt', 'a') as debugger:
         debugger.write("Saving Data\n")
@@ -55,9 +52,6 @@ def Save(fstream):
         text = f"epoch: {epoch}\ntime: {time.time() - Time}\n"
         open('log.txt', 'a').write(text)
         debugger.write(text)
-
-    #for _i in range(10):
-    #    sentries[_i].save(str(_i) + '.h5')
 
 def Test():
     print("\nTest")
@@ -163,10 +157,6 @@ with open('debugger.txt', 'a') as debugger:
 for epoch in range(epoch, 1_000):
     Save('buffer.json')
 
-    #sentries = sentries[1:] + sentries[:1]
-    #sentries[0] = keras.models.clone_model(model)
-    #sentries[0].set_weights(model.get_weights())
-
     if i == data_size:
         i = lim = 0
     lim += cluster_size
@@ -174,7 +164,6 @@ for epoch in range(epoch, 1_000):
     while i < lim:
         # simulate environment
         state, other = Board(), Board()
-        #paragon = sentries[random.randrange(0, min(epoch, 10))]
         isModel = True
         if random.randint(0, 1):
             actions = state.generate()
