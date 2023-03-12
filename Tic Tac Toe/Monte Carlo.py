@@ -57,6 +57,47 @@ def Save(fstream):
         open('log.txt', 'a').write(text)
         debugger.write(text)
 
+def Synthesize():
+    print("Synthesizing Data")
+    state = Board()
+    i = 0
+    while True:
+        history = []
+        isModel = False
+        actions = state.generate()
+
+        for temp in range(2 * (data_size - i)):
+            action = actions[random.randrange(0, actions.shape[0])]
+            history.append(action)
+
+            state.move(action, [0, 0, 1] if isModel else [0, 1, 0])
+            actions = state.generate()
+
+            if not actions.shape[0] or state.reward == 10:
+                break
+            else:
+                isModel = not isModel
+                if isModel:
+                    value = model.predict(state.scrub_all(actions), verbose = 0)
+
+        reward = 10 if isModel else 1
+        for action in history[::-1]:
+            state.move(action, [1, 0, 0])
+
+            if isModel:
+                reward = state.reward + discount * reward
+                X[i] = state.scrub(action)
+                Y[i] = reward
+
+            # train model
+            i += isModel
+            if isModel and not i % 100:
+                print(Y[i - 100:i])
+                if i == data_size:
+                    Save('data.json')
+                    return
+            isModel = not isModel
+
 def Test():
     print("\nTest")
     model = keras.models.load_model('model.h5')
@@ -92,7 +133,7 @@ i = lim = 0
 alpha = 1 / 100 # take the average across the past 100 samples
 
 discount = 0.85
-data_size = 10_000
+data_size = 50_000
 cluster_size = 1_000
 shape = Board().scrub_all(Board().generate()).shape[1]
 X = np.zeros([data_size, shape], dtype = np.int8)
@@ -102,17 +143,13 @@ model = keras.Sequential([
         keras.layers.Dense(125, activation = 'relu',
                             input_shape = [shape]),
         keras.layers.Dense(125, activation = 'relu'),
-        keras.layers.Dense(125, activation = 'relu'),
-        keras.layers.Dense(125, activation = 'relu'),
-        keras.layers.Dense(125, activation = 'relu'),
-        keras.layers.Dense(125, activation = 'relu'),
-        keras.layers.Dense(125, activation = 'relu'),
         keras.layers.Dense(25, activation = 'relu'),
         keras.layers.Dense(5, activation = 'relu'),
         keras.layers.Dense(1)])
 model.summary()
 
 #Test()
+Synthesize()
 Load('data.json')
 Clear()
 #Load('buffer.json')
@@ -133,7 +170,7 @@ for epoch in range(epoch, 1_000):
         isModel = False
         actions = state.generate()
 
-        for temp in range(data_size - i):
+        for temp in range(2 * (data_size - i)):
             action = actions[value.argmax() if isModel and random.randrange(0, 100) < min(95, epoch * 100 // 25) else random.randrange(0, actions.shape[0])]
             history.append(action)
 
@@ -150,7 +187,7 @@ for epoch in range(epoch, 1_000):
                     value = model.predict(state.scrub_all(actions), verbose = 0)
 
         # replay buffer
-        reward = state.reward if isModel else other.reward
+        reward = 10 if isModel else 1
         for action in history[::-1]:
             state.move(action, [1, 0, 0])
 
@@ -165,7 +202,7 @@ for epoch in range(epoch, 1_000):
             if isModel and not i % 100:
                 Qnew = keras.models.clone_model(model)
                 Qnew.compile(optimizer = 'adam', loss = 'mse')
-                loss = Qnew.fit(X, Y, batch_size = 64, epochs = 100, verbose = 0).history['loss'][-1]
+                loss = Qnew.fit(X, Y, batch_size = 64, epochs = 100, verbose = 0, shuffle = True).history['loss'][-1]
                 model.set_weights(0.9 * np.array(model.get_weights(), dtype = object) + 0.1 * np.array(Qnew.get_weights(), dtype = object))
 
                 text = f"loss: {loss}\n"

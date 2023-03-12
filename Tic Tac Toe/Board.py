@@ -19,17 +19,16 @@ class Board():
 
     def move(self, action, player):
         self.board[action.argmax()] = player
-        if player != [0, 0, 1]:
-            self.evaluate()
+        self.evaluate()
 
     def evaluate(self):
         for (coord, change) in zip([0, 0, 0, 1, 2, 2, 3, 6], [1, 3, 4, 3, 2, 3, 1, 1]):
-            sum = 0
+            total = np.zeros(3)
             for i in range(3):
-                sum += all(self.board[coord] == [0, 1, 0])
+                total += self.board[coord]
                 coord += change
             
-            if sum == 3:
+            if total[1] == 3 or total[2] == 3:
                 self.reward = 10
                 return
         self.reward = 1
