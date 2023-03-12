@@ -1,3 +1,4 @@
+# differentiate between playing first and playing second. 2 different sets of models. like how black going first in go is a benefit. and white gets a handicap. 
 #from Board import Board
 #import datetime
 #import json
