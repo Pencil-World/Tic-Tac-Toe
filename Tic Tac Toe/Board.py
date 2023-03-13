@@ -17,6 +17,8 @@ class Board():
             board[i // 3][i % 3] = dictionary[self.board[i].argmax()]
         return str(board)
 
+    #def __eq__(self, other): 
+
     def move(self, action, player):
         self.board[action.argmax()] = player
         self.evaluate()
@@ -34,19 +36,26 @@ class Board():
         self.reward = 1
 
     def generate(self):
-        actions = np.zeros([sum([all(elem == [1, 0, 0]) for elem in self.board]), 9])
-        i = -1
-        temp = self.board.tolist()
-        for elem in actions:
-            i = temp.index([1, 0, 0], i + 1)
-            elem[i] = 1
+        actions = []
+        for i, elem in enumerate(self.board):
+            if (elem == [1, 0, 0]).all():
+                actions.append(i)
         return np.array(actions)
 
-    def scrub(self, action):
-        return np.concatenate([self.board.flatten(), action.flatten()])
+    #def generate(self):
+    #    actions = np.zeros([sum([all(elem == [1, 0, 0]) for elem in self.board]), 9])
+    #    i = -1
+    #    temp = self.board.tolist()
+    #    for elem in actions:
+    #        i = temp.index([1, 0, 0], i + 1)
+    #        elem[i] = 1
+    #    return np.array(actions)
+
+    #def scrub(self, action):
+    #    return np.concatenate([self.board.flatten(), action.flatten()])
     
-    def scrub_all(self, actions):
-        arr = np.zeros([actions.shape[0], 36])
-        for i, action in enumerate(actions):
-            arr[i] = self.scrub(action)
-        return arr
+    #def scrub_all(self, actions):
+    #    arr = np.zeros([actions.shape[0], 36])
+    #    for i, action in enumerate(actions):
+    #        arr[i] = self.scrub(action)
+    #    return arr
