@@ -2,12 +2,10 @@ import numpy as np
 
 class Board():
     def __init__(self, board = None):
+        self.board = np.full([9], 0)
         if board:
-            self.board = np.zeros([9])
             for i, elem in enumerate(board):
                 self.board[i] = elem
-        else:
-            self.board = np.full([9], 0)
         self.evaluate()
 
     def __str__(self):
@@ -32,12 +30,7 @@ class Board():
 
     def evaluate(self):
         for (coord, change) in zip([0, 0, 0, 1, 2, 2, 3, 6], [1, 3, 4, 3, 2, 3, 1, 1]):
-            temp = coord
-            for i in range(2):
-                coord += change
-                if self.board[coord] != temp:
-                    break
-            else:
+            if 0 != self.board[coord] == self.board[coord + change] == self.board[coord + 2 * change]:
                 self.reward = 10
                 return
         self.reward = 1

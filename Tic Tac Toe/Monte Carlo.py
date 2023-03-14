@@ -1,4 +1,4 @@
-# from Board import Board
+from Board import Board
 import datetime
 import json
 from tensorflow import keras
@@ -10,31 +10,31 @@ import time
 #     open('log.txt', 'w').close()
 #     open('buffer.json', 'w').close()
 
-def Load(fstream):
-    with open('debugger.txt', 'a') as debugger:
-        debugger.write("Loading Data\n")
-    global epoch, i, lim, QTable
-    QTable = json.load(open(fstream, 'r'))
+#def Load(fstream):
+#    with open('debugger.txt', 'a') as debugger:
+#        debugger.write("Loading Data\n")
+#    global epoch, i, lim, QTable
+#    QTable = json.load(open(fstream, 'r'))
 
-    f = open('log.txt', 'r')
-    log = f.read().split()
-    f.close()
+#    f = open('log.txt', 'r')
+#    log = f.read().split()
+#    f.close()
 
-    index = -log[::-1].index("epoch:")
-    epoch = int(log[index])
-    i = lim = (epoch - 1) * cluster_size % data_size
+#    index = -log[::-1].index("epoch:")
+#    epoch = int(log[index])
+#    i = lim = (epoch - 1) * cluster_size % episodes
 
-    f = open('log.txt', 'w')
-    f.write(''.join([elem + ('\n' if elem.find(':') == -1 else ' ') for elem in log[:index - 1]]))
-    f.close()
+#    f = open('log.txt', 'w')
+#    f.write(''.join([elem + ('\n' if elem.find(':') == -1 else ' ') for elem in log[:index - 1]]))
+#    f.close()
 
-def Save(fstream):
-    with open('debugger.txt', 'a') as debugger:
-        debugger.write("Saving Data\n")
-        json.dump(QTable, open(fstream, 'w'), indent = 4)
-        text = f"epoch: {epoch}\ntime: {time.time() - Time}\n"
-        open('log.txt', 'a').write(text)
-        debugger.write(text)
+#def Save(fstream):
+#    with open('debugger.txt', 'a') as debugger:
+#        #debugger.write("Saving Data\n")
+#        json.dump(QTable, open(fstream, 'w'), indent = 4)
+#        text = f"epoch: {epoch}\ntime: {time.time() - Time}\n"
+#        open('log.txt', 'a').write(text)
+#        #debugger.write(text)
 
 def Test():
     print("\nTest")
@@ -68,68 +68,87 @@ def Test():
 
 open('debugger.txt', 'w').close()
 Time = time.time()
-epoch = 1
-i = lim = 0
+lim = 300
 
-alpha = 1 / 100
+alpha = 0.00001
 gamma = 0.85
-data_size = 10_000
-cluster_size = 1_000
+episodes = 1_000
+data_size = 1_000
 
-QTable = dict()
+X = np.zeros([data_size, 3], dtype = np.float32)
+Y = np.zeros([data_size, 3], dtype = np.float32)
+
 #Test()
-# Clear()
+#Clear()
 #Load('buffer.json')
+
+model = keras.Sequential([
+        keras.layers.Dense(125, activation = 'relu',
+                            input_shape = [3]),
+        keras.layers.Dense(125, activation = 'relu'),
+        keras.layers.Dense(25, activation = 'relu'),
+        keras.layers.Dense(5, activation = 'relu'),
+        keras.layers.Dense(3)])
+model.compile(optimizer = 'adam', loss = 'mse')
+model.fit(X, Y, batch_size = 64, epochs = 100, verbose = 0, shuffle = True)
+model.summary()
 
 state = Board()
 with open('debugger.txt', 'a') as debugger:
     debugger.write("start program\n")
-for epoch in range(epoch, 1_000):
-    #Save('buffer.json')
+for I_AM_ETERNAL in range(10):
+    for i in range(data_size):
+        Y[i] = model.predict(np.array([[0.8, 0, 0.2]]), verbose = 0)
+        QTable = dict()
+        for epoch in range(lim):
+            #Save('buffer.json')
 
-    if i == data_size:
-        i = lim = 0
-    lim += cluster_size
-    WinLossRatio = [0, 0]
-    while i < lim:
-        # simulate environment
-        history = []
-        isModel = False
-        actions = state.generate()
+            WinLossRatio = [0, 0, 0]
+            for temp in range(episodes):
+                history = []
+                isModel = False
+                actions = state.generate()
 
-        for temp in range(2 * (data_size - i)):
-            action = actions[QTable[state].argmax() if isModel and random.randrange(0, 100) < min(95, epoch * 100 // 25) else random.randrange(0, actions.shape[0])]
-            history.append(action)
+                while True:
+                    if isModel and random.randrange(0, 100) < min(95, epoch * 100 // 25) and state in QTable:
+                        action = QTable[state].argmax()
+                    else:
+                        action = actions[random.randrange(0, actions.shape[0])]
+                    history.append(action)
 
-            state.move(action, isModel + 1)
-            actions = state.generate()
+                    state.move(action, isModel + 1)
+                    actions = state.generate()
 
-            if not actions.shape[0] or state.reward == 10:
-                if state.reward == 10:
-                    WinLossRatio[not isModel] += 1
-                break
-            isModel = not isModel
+                    if not actions.shape[0] or state.reward == 10:
+                        if state.reward == 10:
+                            it = int(not isModel)
+                        else:
+                            it = 2
+                        WinLossRatio[it] += 1
+                        reward = Y[i][it]
+                        break
+                    isModel = not isModel
 
-        # replay buffer
-        reward = 10 if isModel else 1
-        for action in history[::-1]:
-            state.move(action, 0)
-            if isModel:
-                reward = state.reward + gamma * reward
-                mean = QTable.get(state)
-                if mean:
-                    mean = mean[action]
-                else:
-                    QTable[state] = np.zeros([9])
-                    mean = reward
-                QTable[state][action] = mean + alpha * (reward - mean)
+                for action in history[::-1]:
+                    state.move(action, 0)
+                    if isModel:
+                        reward = state.reward + gamma * reward#bigg issueee??? what should default state.reward equal!!!
+                        if state in QTable:
+                            mean = QTable[state][action]
+                        else:
+                            QTable[state] = np.zeros([9])
+                            mean = reward
+                        QTable[state][action] = mean + alpha * (reward - mean)
+                    isModel = not isModel
 
-            # train model
-            i += isModel
-            if isModel and not i % 100:
-                with open('debugger.txt', 'a') as debugger:
-                    debugger.write(f"{datetime.datetime.now()}")
-            isModel = not isModel
+            if lim / 2 <= epoch:
+                X[i] += WinLossRatio
+            with open('debugger.txt', 'a') as debugger:
+                debugger.write(f"win to loss to tie ratio:\t{WinLossRatio[0] / episodes}\t{WinLossRatio[1] / episodes}\t{WinLossRatio[2] / episodes}\n")
+        X[i] /= episodes * lim / 2
 
-    with open('debugger.txt', 'a') as debugger:
-        debugger.write(f"win to loss ratio (expected to be between 50% and 90%): {WinLossRatio[0] * 100 / sum(WinLossRatio)} percent\n")
+        Qnew = keras.models.clone_model(model)
+        Qnew.compile(optimizer = 'adam', loss = 'mse')
+        loss = Qnew.fit(X[0:i + 1], Y[0:i + 1], batch_size = 64, epochs = 100, verbose = 0, shuffle = True).history['loss'][-1]
+        model.set_weights(0.9 * np.array(model.get_weights(), dtype = object) + 0.1 * np.array(Qnew.get_weights(), dtype = object))
+        print(loss)

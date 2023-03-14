@@ -148,8 +148,8 @@
 #        keras.layers.Dense(1)])
 #model.summary()
 
-##Synthesize()
-##Test()
+#Synthesize()
+#Test()
 #Load('data.json')
 #Clear()
 ##Load('buffer.json')
