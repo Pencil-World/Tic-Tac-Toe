@@ -1,4 +1,4 @@
-from Board import Board
+# from Board import Board
 import datetime
 import json
 from tensorflow import keras
@@ -6,29 +6,20 @@ import numpy as np
 import random
 import time
 
-def Clear():
-    open('log.txt', 'w').close()
-    open('buffer.json', 'w').close()
+# def Clear():
+#     open('log.txt', 'w').close()
+#     open('buffer.json', 'w').close()
 
 def Load(fstream):
     with open('debugger.txt', 'a') as debugger:
         debugger.write("Loading Data\n")
-    global epoch, i, lim, model
-
-    data = json.load(open(fstream, 'r'))
-    length = len(data.items())
-    X[:length] = [np.array(json.loads(elem)) for elem in data.keys()]
-    Y[:length] = list(data.values())
-
-    for it, _i in enumerate(range(length, data_size)):
-        X[_i] = X[it]
-        Y[_i] = Y[it]
+    global epoch, i, lim, QTable
+    QTable = json.load(open(fstream, 'r'))
 
     f = open('log.txt', 'r')
     log = f.read().split()
     f.close()
 
-    model = keras.models.load_model('model.h5')
     index = -log[::-1].index("epoch:")
     epoch = int(log[index])
     i = lim = (epoch - 1) * cluster_size % data_size
@@ -40,11 +31,7 @@ def Load(fstream):
 def Save(fstream):
     with open('debugger.txt', 'a') as debugger:
         debugger.write("Saving Data\n")
-   
-        JSON = dict(zip([repr(elem.tolist()) for elem in X], Y))
-        json.dump(JSON, open(fstream, 'w'), indent = 4)
-
-        model.save('model.h5')
+        json.dump(QTable, open(fstream, 'w'), indent = 4)
         text = f"epoch: {epoch}\ntime: {time.time() - Time}\n"
         open('log.txt', 'a').write(text)
         debugger.write(text)
@@ -85,15 +72,13 @@ epoch = 1
 i = lim = 0
 
 alpha = 1 / 100
-discount = 0.85
+gamma = 0.85
 data_size = 10_000
 cluster_size = 1_000
 
 QTable = dict()
-#Synthesize()
 #Test()
-Load('data.json')
-Clear()
+# Clear()
 #Load('buffer.json')
 
 state = Board()
@@ -116,7 +101,7 @@ for epoch in range(epoch, 1_000):
             action = actions[QTable[state].argmax() if isModel and random.randrange(0, 100) < min(95, epoch * 100 // 25) else random.randrange(0, actions.shape[0])]
             history.append(action)
 
-            state.move(action, [0, 0, 1] if isModel else [0, 1, 0])
+            state.move(action, isModel + 1)
             actions = state.generate()
 
             if not actions.shape[0] or state.reward == 10:
@@ -128,18 +113,22 @@ for epoch in range(epoch, 1_000):
         # replay buffer
         reward = 10 if isModel else 1
         for action in history[::-1]:
-            state.move(action, [1, 0, 0])
-
+            state.move(action, 0)
             if isModel:
-                reward = state.reward + discount * reward
-                mean = QTable[state][action]
+                reward = state.reward + gamma * reward
+                mean = QTable.get(state)
+                if mean:
+                    mean = mean[action]
+                else:
+                    QTable[state] = np.zeros([9])
+                    mean = reward
                 QTable[state][action] = mean + alpha * (reward - mean)
 
             # train model
             i += isModel
             if isModel and not i % 100:
                 with open('debugger.txt', 'a') as debugger:
-                    debugger.write(f"{datetime.datetime.now()} " + text)
+                    debugger.write(f"{datetime.datetime.now()}")
             isModel = not isModel
 
     with open('debugger.txt', 'a') as debugger:
