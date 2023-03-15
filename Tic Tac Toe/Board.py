@@ -1,11 +1,17 @@
+import json
 import numpy as np
 
 class Board():
-    def __init__(self, board = None):
+    def __init__(self, board = None, dict = None):
         self.board = np.full([9], 0)
         if board:
             for i, elem in enumerate(board):
                 self.board[i] = elem
+        elif dict:
+            for key, val in dict.items():
+                if type(val) is list:
+                    val = np.array(val)
+                setattr(self, key, val)
         self.evaluate()
 
     def __str__(self):
@@ -23,6 +29,15 @@ class Board():
         for i, elem in enumerate(self.board):
             val += elem * 3 ** i
         return int(val)
+
+    @staticmethod
+    def json_dumps(object):
+        return json.dumps(object, default = lambda o: (o.tolist() if type(o) is np.ndarray else o.__dict__), 
+            sort_keys = True, indent = 4)
+
+    @staticmethod
+    def json_loads(object):
+        return Board(dict = json.loads(object))
 
     def move(self, action, player):
         self.board[action] = player
