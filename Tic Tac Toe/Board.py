@@ -7,12 +7,15 @@ class Board():
         if board:
             for i, elem in enumerate(board):
                 self.board[i] = elem
-        elif dict:
-            for key, val in dict.items():
-                if type(val) is list:
-                    val = np.array(val)
-                setattr(self, key, val)
+        #elif dict:
+        #    for key, val in dict.items():
+        #        if type(val) is list:
+        #            val = np.array(val)
+        #        setattr(self, key, val)
         self.evaluate()
+
+    def __repr__(self):
+        return str(self.board)
 
     def __str__(self):
         board = np.full([3, 3], "")
@@ -21,23 +24,22 @@ class Board():
             board[i // 3][i % 3] = dictionary[elem]
         return str(board)
 
-    def __eq__(self, other): 
-        return (self.board == other.board).all()
+    #def __eq__(self, other): 
+    #    return (self.board == other.board).all()
 
-    def __hash__(self):
-        val = 0
-        for i, elem in enumerate(self.board):
-            val += elem * 3 ** i
-        return int(val)
+    #def __hash__(self):
+    #    val = 0
+    #    for i, elem in enumerate(self.board):
+    #        val += elem * 3 ** i
+    #    return int(val)
 
-    @staticmethod
-    def json_dumps(object):
-        return json.dumps(object, default = lambda o: (o.tolist() if type(o) is np.ndarray else o.__dict__), 
-            sort_keys = True, indent = 4)
+    #@staticmethod
+    #def json_dumps(object):
+    #    return json.dumps(object, default = lambda o: (o.tolist() if type(o) is np.ndarray else o.__dict__))
 
-    @staticmethod
-    def json_loads(object):
-        return Board(dict = json.loads(object))
+    #@staticmethod
+    #def json_loads(object):
+    #    return Board(dict = json.loads(object))
 
     def move(self, action, player):
         self.board[action] = player

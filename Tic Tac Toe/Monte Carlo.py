@@ -1,4 +1,5 @@
 from Board import Board
+import copy
 import datetime
 import json
 from tensorflow import keras
@@ -19,10 +20,12 @@ def Load(fstream):
     log = f.read().split()
     f.close()
 
-    # fix later
+    # fix later. get index, epoch, and i from length of array. how many lines it is and truncate/floor
     #index = -log[::-1].index("epoch:")
     #epoch = int(log[index])
     #i = lim = (epoch - 1) * cluster_size % episodes
+    model.compile(optimizer = 'adam', loss = 'mse')
+    model.fit(X, Y, batch_size = 64, epochs = 100, verbose = 0, shuffle = True)
 
     f = open('log.txt', 'w')
     f.write(''.join([elem + ('\n' if elem.find(':') == -1 else ' ') for elem in log[:index - 1]]))
@@ -31,10 +34,9 @@ def Load(fstream):
 def Save(fstream):
     with open('debugger.txt', 'a') as debugger:
         debugger.write("Saving Data\n")
-        JSON = dict(zip([repr(elem.tolist()) for elem in X], [repr(elem.tolist()) for elem in Y]))
-        json.dump(JSON, open(fstream, 'w'), indent = 4)
-        json.dump(QTable, open('model.json', 'w'), indent = 4)
 
+        JSON = dict(zip([str(elem) for elem in X], [str(elem) for elem in Y]))
+        json.dump(JSON, open(fstream, 'w'), indent = 4)
         model.save('model.h5')
         debugger.write(f"epoch: {I_AM_ETERNAL * data_size + i}\ntime: {datetime.datetime.now()}\n")
 
@@ -71,12 +73,15 @@ def Test():
 alpha = 0.00001
 gamma = 0.85
 episodes = 1_000
-data_size = 1_00
+data_size = 1_000
 
 open('debugger.txt', 'w').close()
 lim = 100
 X = np.zeros([data_size, 3], dtype = np.float32)
 Y = np.zeros([data_size, 3], dtype = np.float32)
+
+print(repr(Board()))
+print(Board())
 
 #Test()
 Clear()
@@ -91,13 +96,12 @@ model = keras.Sequential([
         keras.layers.Dense(25, activation = 'relu'),
         keras.layers.Dense(5, activation = 'relu'),
         keras.layers.Dense(3)])
-model.compile(optimizer = 'adam', loss = 'mse')
-model.fit(X, Y, batch_size = 64, epochs = 100, verbose = 0, shuffle = True)
 model.summary()
 
 state = Board()
+HighScore = 0
 with open('debugger.txt', 'a') as debugger:
-    debugger.write("start program\n")
+    debugger.write(f"start program\n{datetime.datetime.now()}\n")
 for I_AM_ETERNAL in range(10):
     for i in range(data_size):
         if not (i + 1) % 100:
@@ -112,11 +116,17 @@ for I_AM_ETERNAL in range(10):
                 actions = state.generate()
 
                 while actions.shape[0] and state.reward != 10:
-                    if isModel and random.randrange(0, 100) < min(95, epoch * 100 // 25):
-                        action = QTable.setdefault(state, np.array([(elem if elem in actions else 0) for elem in range(9)])).argmax()
+                    # fix please
+                    action = actions[random.randrange(0, actions.shape[0])]
+                    if isModel:
+                        mean = QTable.setdefault(repr(state), np.zeros([9]))
+                        if random.randrange(0, 100) < min(95, epoch * 100 // 25):
+                            mean = mean.argmax()
+                            action = mean.argmax() if mean[mean.argmax()] else action
+                        mean = mean[action]
                     else:
-                        action = actions[random.randrange(0, actions.shape[0])]
-                    history.append(action)
+                        mean = 0
+                    history.append((action, mean))
 
                     state.move(action, isModel + 1)
                     actions = state.generate()
@@ -130,17 +140,26 @@ for I_AM_ETERNAL in range(10):
                     X[i][it] += 1
                 reward = Y[i][it]
 
-                for action in history[::-1]:
+                for action, mean in history[::-1]:
                     isModel = not isModel
                     state.move(action, 0)
                     if isModel:
                         reward = state.reward + gamma * reward
-                        mean = QTable.setdefault(state, np.zeros([9]))[action]
-                        QTable[state][action] = mean + alpha * (reward - mean)
+                        mean = QTable.setdefault(state, np.zeros([9]))[action] # remove, stored in history
+                        mean[action] = mean + alpha * (reward - mean)
+                        mean[action] = mean[action] + alpha * (reward - mean[action])
+                        mean[action] = (1 - alpha) * mean[action] + alpha * reward
+
         X[i] /= episodes * lim / 2
+        if 0.975 * HighScore < X[i][0]:
+            HighScore = max(HighScore, X[i][0])
+            JSON = dict(zip(QTable.keys(), [str(elem) for elem in QTable.values()]))
+            json.dump(JSON, open('model.json', 'w'), indent = 4)
+            with open('debugger.txt', 'a') as debugger:
+                debugger.write(f"{int(HighScore * 1000) / 1000} - {int(X[i][0] * 1000) / 1000}\twin: {int(Y[i][0] * 1000) / 1000}\tloss: {int(Y[i][1] * 1000) / 1000}\ttie: {int(Y[i][2] * 1000) / 1000}\n")
 
         Qnew = keras.models.clone_model(model)
         Qnew.compile(optimizer = 'adam', loss = 'mse')
-        loss = Qnew.fit(X[0:i + 1], Y[0:i + 1], batch_size = 64, epochs = 100, verbose = 0, shuffle = True).history['loss'][-1]
+        loss = Qnew.fit(X[:None if I_AM_ETERNAL else i + 1], Y[:None if I_AM_ETERNAL else i + 1], batch_size = 64, epochs = 100, verbose = 0, shuffle = True).history['loss'][-1]
         model.set_weights(0.9 * np.array(model.get_weights(), dtype = object) + 0.1 * np.array(Qnew.get_weights(), dtype = object))
         open('log.txt', 'a').write(f"win: {int(X[i][0] * 1000) / 1000}\tloss: {int(X[i][1] * 1000) / 1000}\ttie: {int(X[i][2] * 1000) / 1000}\tloss: {loss}\n")
