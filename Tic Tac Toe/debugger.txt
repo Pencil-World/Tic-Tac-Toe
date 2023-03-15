@@ -1,0 +1,4 @@
+start program
+Saving Data
+epoch: 0
+time: 2023-03-14 18:33:52.019827
