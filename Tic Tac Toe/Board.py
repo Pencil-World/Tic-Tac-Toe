@@ -2,7 +2,7 @@ import json
 import numpy as np
 
 class Board():
-    def __init__(self, board = None, dict = None):
+    def __init__(self, board = None):
         self.board = np.full([9], 0)
         if board:
             for i, elem in enumerate(board):

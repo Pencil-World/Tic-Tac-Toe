@@ -1,5 +1,4 @@
 from Board import Board
-import copy
 import datetime
 import json
 from tensorflow import keras
@@ -116,18 +115,12 @@ for I_AM_ETERNAL in range(10):
                 actions = state.generate()
 
                 while actions.shape[0] and state.reward != 10:
-                    # fix please
+                    mean = None
                     action = actions[random.randrange(0, actions.shape[0])]
                     if isModel:
                         mean = QTable.setdefault(repr(state), np.zeros([9]))
-                        if random.randrange(0, 100) < min(95, epoch * 100 // 25):
-                            mean = mean.argmax()
-                            action = mean.argmax() if mean[mean.argmax()] else action
-                        mean = mean[action]
-                    else:
-                        mean = 0
+                        action = mean.argmax() if random.randrange(0, 100) < min(95, epoch * 100 // 25) and mean.max() else action
                     history.append((action, mean))
-
                     state.move(action, isModel + 1)
                     actions = state.generate()
                     isModel = not isModel
@@ -145,10 +138,7 @@ for I_AM_ETERNAL in range(10):
                     state.move(action, 0)
                     if isModel:
                         reward = state.reward + gamma * reward
-                        mean = QTable.setdefault(state, np.zeros([9]))[action] # remove, stored in history
-                        mean[action] = mean + alpha * (reward - mean)
                         mean[action] = mean[action] + alpha * (reward - mean[action])
-                        mean[action] = (1 - alpha) * mean[action] + alpha * reward
 
         X[i] /= episodes * lim / 2
         if 0.975 * HighScore < X[i][0]:
