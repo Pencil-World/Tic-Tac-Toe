@@ -3,7 +3,7 @@ import numpy as np
 
 class Board():
     def __init__(self, board = None):
-        self.board = np.full([9], 0)
+        self.board = np.full([9], 0, dtype = np.int8)
         if board:
             for i, elem in enumerate(board):
                 self.board[i] = elem
@@ -35,4 +35,4 @@ class Board():
         for i, elem in enumerate(self.board):
             if not elem:
                 actions.append(i)
-        return np.array(actions)
+        return np.array(actions, dtype = np.int8)
