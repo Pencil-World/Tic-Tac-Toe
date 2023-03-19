@@ -38,6 +38,7 @@ def Save():
         json.dump(JSON, open('buffer.json', 'w'), indent = 4)
         model.save('model.h5')
         debugger.write(f"epoch: {I_AM_ETERNAL * data_size + i}\ntime: {datetime.datetime.now()}\n")
+        debugger.write(f"win: {HighScore[0]:.3f}\tloss: {HighScore[1]:.3f}\ttie: {HighScore[2]:.3f}\t\t{model(np.array([HighScore]))}\n")
 
 def Test():
     print("\nTest")
@@ -80,7 +81,8 @@ model = keras.Sequential([
 model.compile(optimizer = 'adam', loss = 'mse')
 model.summary()
 
-Clear()
+#open('The One.json', 'w').write(open('model.json').read())
+#Clear()
 #Load()
 #Test()
 
@@ -93,7 +95,7 @@ for I_AM_ETERNAL in range(I_AM_ETERNAL, 10):
         if not (i + 1) % 100:
             Save()
         X[i] = [0, 0, 0]
-        Y[i] = model(np.array([[0.9, 0, 0.1]])) if I_AM_ETERNAL else [random.randint(0, 100), random.randint(-100, 0), random.randint(-50, 50)]
+        Y[i] = model(np.array([HighScore])) if I_AM_ETERNAL else [random.randint(0, 100), random.randint(-100, 0), random.randint(-50, 50)]
         QTable = dict()
         for epoch in range(lim):
             for temp in range(episodes):
@@ -113,8 +115,7 @@ for I_AM_ETERNAL in range(I_AM_ETERNAL, 10):
                     isModel = not isModel
 
                 it = int(isModel) if state.reward == 10 else 2
-                if lim / 2 <= epoch:
-                    X[i][it] += 1
+                X[i][it] += lim / 2 <= epoch
                 reward = Y[i][it]
 
                 for action, mean in history[::-1]:
@@ -136,9 +137,9 @@ for I_AM_ETERNAL in range(I_AM_ETERNAL, 10):
         if I_AM_ETERNAL:
             Qnew = keras.models.clone_model(model)
             Qnew.compile(optimizer = 'adam', loss = 'mse')
-            loss = Qnew.fit(X, Y, batch_size = 64, epochs = 100, verbose = 0, shuffle = True).history['loss'][-1]
+            loss = Qnew.fit(X, Y, epochs = 100, verbose = 0).history['loss'][-1]
             model.set_weights(0.9 * np.array(model.get_weights(), dtype = object) + 0.1 * np.array(Qnew.get_weights(), dtype = object))
         else:
-            loss = model.fit(X[:i + 1], Y[:i + 1], batch_size = 64, epochs = 100, verbose = 0, shuffle = True).history['loss'][-1]
+            loss = model.fit(X[:i + 1], Y[:i + 1], epochs = 100, verbose = 0).history['loss'][-1]
         open('log.txt', 'a').write(f"win: {X[i][0]:.3f}\tloss: {X[i][1]:.3f}\ttie: {X[i][2]:.3f}\tloss: {loss:.3f}\n")
     i = 0

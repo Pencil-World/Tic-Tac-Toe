@@ -42,6 +42,8 @@
     <Content Include="model.h5" />
     <Content Include="data.json" />
     <Content Include="model.json" />
+    <Content Include="The One.h5" />
+    <Content Include="The One.json" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
