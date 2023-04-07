@@ -25,10 +25,10 @@ class Board():
 
     def evaluate(self):
         for (coord, change) in zip([0, 0, 0, 1, 2, 2, 3, 6], [1, 3, 4, 3, 2, 3, 1, 1]):
-            if 0 != self.board[coord] == self.board[coord + change] == self.board[coord + 2 * change]:
-                self.reward = 10
+            if 0 != self.board[coord] == self.board[coord + change] == self.board[coord + change + change]:
+                self.reward = "RED"
                 return
-        self.reward = 1
+        self.reward = "GREEN"
 
     def generate(self):
         actions = []

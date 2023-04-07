@@ -26,16 +26,6 @@
     <Compile Include="Multi-Agent.py" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="0.h5" />
-    <Content Include="1.h5" />
-    <Content Include="2.h5" />
-    <Content Include="3.h5" />
-    <Content Include="4.h5" />
-    <Content Include="5.h5" />
-    <Content Include="6.h5" />
-    <Content Include="7.h5" />
-    <Content Include="8.h5" />
-    <Content Include="9.h5" />
     <Content Include="buffer.json" />
     <Content Include="debugger.txt" />
     <Content Include="log.txt" />
