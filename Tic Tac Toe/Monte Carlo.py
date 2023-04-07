@@ -57,7 +57,8 @@ with open('debugger.txt', 'a') as debugger:
 for i in range(data_size):
     if not (i + 1) % 100:
         Print()
-    if i / 100 % len(variables):
+    val = variables[i // 10 % len(variables)]
+    if i // 10 % len(variables):
         print("hi")
 
     WinLossRatio = [0, 0, 0]
@@ -84,20 +85,23 @@ for i in range(data_size):
             WinLossRatio[it] += epoch + 1 == lim
             reward = R[it]
 
+            prev = None
             for action, mean in history[::-1]:
                 isModel = not isModel
                 state.move(action, 0)
                 if isModel:
                     reward = R[3] + gamma * reward
-                    mean[action] = reward if mean[action] == -1000 else mean[action] + alpha * (reward - mean[action])
+                    mean[action][prev] = reward if mean[action] == -1000 else mean[action] + alpha * (reward - mean[action]) # if prev is none, set all possibilities of prev to the same value (as if opponent does not play a move)
+                else:
+                    prev = action
 
     WinLossRatio /= episodes
     if HighScore[0] < WinLossRatio[0]:
         with open('debugger.txt', 'a') as debugger:
-            debugger.write(f"{HighScore[0]:.3f}-{WinLossRatio[0]:.3f}\twin: {R[0]}\tloss: {R[1]}\ttie: {R[2]}\n")
+            debugger.write(f"{HighScore[0]:.3f}-{WinLossRatio[0]:.3f}\tgamma: {gamma}\twin reward: {R[0]}\tloss reward: {R[1]}\ttie reward: {R[2]}\n")
         if HighScore[0] < WinLossRatio[0] or (HighScore[0] == WinLossRatio[0] and HighScore[1] < WinLossRatio[1]):
             HighScore = WinLossRatio
             JSON = dict(zip(QTable.keys(), [repr(elem.tolist()) for elem in QTable.values()]))
             json.dump(JSON, open('model.json', 'w'), indent = 4)
 
-    open('log.txt', 'a').write(f"win: {WinLossRatio[0]:.3f}\tloss: {WinLossRatio[1]:.3f}\ttie: {WinLossRatio[2]:.3f}\n")
+    open('log.txt', 'a').write(f"win rate: {WinLossRatio[0]:.3f}\tloss rate: {WinLossRatio[1]:.3f}\ttie rate: {WinLossRatio[2]:.3f}\n")
