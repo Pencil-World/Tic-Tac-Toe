@@ -1,2 +1,3 @@
 start program
-2023-04-07 16:38:09.927227
+2023-04-07 16:48:04.782326
+0.000-0.862	gamma: 0.0001	win reward: 10	loss reward: -10	tie reward: 0/tdefault reward: 0

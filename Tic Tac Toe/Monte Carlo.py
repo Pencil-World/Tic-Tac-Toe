@@ -41,9 +41,9 @@ episodes = 1_000
 data_size = 1_000
 
 # polynomial regression always converges to a global minimum with MSE
-HighScore = [0, 0, 0]
-R = [10, -10, 0, 0]
-bounds = np.zeros([1, 2, 2]) # gamma, win reward, lose reward, tie reward, default reward
+HighScore = np.zeros([3])
+R = [10, -10, 0, 0] # win reward, lose reward, tie reward, default reward
+bounds = np.zeros([1, 2, 2]) # includes gamma as the 0th element
 
 #open('The One.json', 'w').write(open('model.json').read())
 Clear()
@@ -56,9 +56,9 @@ with open('debugger.txt', 'a') as debugger:
 for i in range(data_size):
     if not (i + 1) % 100:
         Print()
-    it = i / 10 % len(bounds)
+    it = i / 10 % bounds.shape[0]
     if it < 0.2:
-        gamma = it == 0.1
+        gamma = 0.0001 if it == 0 else 0.9999
     elif int(it) == 0:
         gamma = max(0, min((bounds[0][0][0] + bounds[0][1][0]) / 2, 1))
     #elif it % 1 < 0.2:
@@ -67,7 +67,7 @@ for i in range(data_size):
     #    R[int(it) - 1] = (bounds[int(it)][0][0] + bounds[int(it)][1][0]) / 2
 
     it = int(it)
-    CurrScore = [0, 0, 0]
+    CurrScore = np.zeros([3])
     QTable = dict()
     for epoch in range(lim):
         for temp in range(episodes):
@@ -102,7 +102,7 @@ for i in range(data_size):
     open('log.txt', 'a').write(f"win rate: {CurrScore[0]:.3f}\tloss rate: {CurrScore[1]:.3f}\ttie rate: {CurrScore[2]:.3f}\n")
     if HighScore[0] < CurrScore[0]:
         with open('debugger.txt', 'a') as debugger:
-            debugger.write(f"{HighScore[0]:.3f}-{CurrScore[0]:.3f}\tgamma: {gamma}\twin reward: {R[0]}\tloss reward: {R[1]}\ttie reward: {R[2]}/tdefault reward: {R[3]}\n")
+            debugger.write(f"{HighScore[0]:.3f}-{CurrScore[0]:.3f}\tgamma: {gamma}\twin reward: {R[0]}\tloss reward: {R[1]}\ttie reward: {R[2]}\tdefault reward: {R[3]}\n")
         HighScore = CurrScore
         JSON = dict(zip(QTable.keys(), [repr(elem.tolist()) for elem in QTable.values()])) # works for jagged arrays. includes commas
         json.dump(JSON, open('model.json', 'w'), indent = 4)
