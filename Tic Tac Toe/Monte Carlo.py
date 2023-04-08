@@ -15,25 +15,25 @@ def Print():
         debugger.write("Saving Data\n")
         debugger.write(f"time: {datetime.datetime.now()}\ti: {i}\tbounds: {str(bounds.tolist())}")
 
-#def Test():
-#    print("\nTest")
-#    QTable = json.load(open('The One.json', 'r'))
-#    for key, val in QTable.items():
-#        QTable[key] = np.array(json.loads(val))
+def Test():
+    print("\nTest")
+    QTable = json.load(open('The One.json', 'r'))
+    for key, val in QTable.items():
+        QTable[key] = np.array(json.loads(val))
 
-#    state = Board()
-#    PlayersTurn = True
-#    for temp in range(1_000):
-#        print('\n' + str(state))
-#        action = int(input()) if PlayersTurn else (QTable[repr(state)].argmax() if random.randrange(0, 100) < 95 and repr(state) in QTable else actions[random.randrange(0, actions.shape[0])])
-#        state.move(action, 1 if PlayersTurn else 2)
+    state = Board()
+    ModelTurn = True
+    for temp in range(1_000):
+        print('\n' + str(state))
+        action = int(input()) if ModelTurn else (QTable[repr(state)].argmax() if random.randrange(0, 100) < 95 and repr(state) in QTable else actions[random.randrange(0, actions.shape[0])])
+        state.move(action, ModelTurn + 1)
 
-#        actions = state.generate()
-#        PlayersTurn = not PlayersTurn
-#        if not actions.shape[0] or state.reward == "RED":
-#            print('\n' + str(state))
-#            state = Board()
-#            PlayersTurn = True
+        actions = state.generate()
+        ModelTurn = not ModelTurn
+        if not actions.shape[0] or state.reward == "RED":
+            print('\n' + str(state))
+            state = Board()
+            ModelTurn = True
 
 alpha = 0.00001
 gamma = 0.5
@@ -56,45 +56,45 @@ with open('debugger.txt', 'a') as debugger:
 for i in range(data_size):
     if not (i + 1) % 100:
         Print()
-    it = i / 10 % bounds.shape[0]
-    if it < 0.2:
-        gamma = 0.0001 if it == 0 else 0.9999
-    elif int(it) == 0:
+    pi = i / 10 % bounds.shape[0]
+    if pi < 0.2:
+        gamma = 0.0001 if pi == 0 else 0.9999
+    elif int(pi) == 0:
         gamma = max(0, min((bounds[0][0][0] + bounds[0][1][0]) / 2, 1))
-    #elif it % 1 < 0.2:
-    #    R[int(it) - 1] = 100 * (-1 if it % 1 else 1)
+    #elif pi % 1 < 0.2:
+    #    R[int(pi) - 1] = 100 * (-1 if pi % 1 else 1)
     #else:
-    #    R[int(it) - 1] = (bounds[int(it)][0][0] + bounds[int(it)][1][0]) / 2
+    #    R[int(pi) - 1] = (bounds[int(pi)][0][0] + bounds[int(pi)][1][0]) / 2
 
-    it = int(it)
+    pi = int(pi)
     CurrScore = np.zeros([3])
     QTable = dict()
     for epoch in range(lim):
         for temp in range(episodes):
             history = []
-            isModel = True
+            ModelTurn = True
             actions = state.generate()
 
             while actions.shape[0] and state.reward != "RED":
                 mean = None
                 action = actions[random.randrange(0, actions.shape[0])]
-                if isModel:
+                if ModelTurn:
                     mean = QTable.setdefault(repr(state), np.full([9], -1000, dtype = np.float32))
                     index = mean.argmax() if random.randrange(0, 100) < epoch * (100 // lim) else None
                     action = index if index and mean[index] != -1000 else action
                 history.append((action, mean))
-                state.move(action, isModel + 1)
+                state.move(action, ModelTurn + 1)
                 actions = state.generate()
-                isModel = not isModel
+                ModelTurn = not ModelTurn
 
-            it = int(isModel) if state.reward == "RED" else 2
+            it = int(ModelTurn) if state.reward == "RED" else 2
             CurrScore[it] += epoch + 1 == lim
             reward = R[it]
 
             for action, mean in history[::-1]:
-                isModel = not isModel
+                ModelTurn = not ModelTurn
                 state.move(action, 0)
-                if isModel:
+                if ModelTurn:
                     reward = R[3] + gamma * reward
                     mean[action] = reward if mean[action] == -1000 else mean[action] + alpha * (reward - mean[action])
 
@@ -107,4 +107,4 @@ for i in range(data_size):
         JSON = dict(zip(QTable.keys(), [repr(elem.tolist()) for elem in QTable.values()])) # works for jagged arrays. includes commas
         json.dump(JSON, open('model.json', 'w'), indent = 4)
 
-        bounds[it][bounds[it][:,1].argmin()] = np.array([gamma if it == 0 else R[it - 1], CurrScore[0]])
+        bounds[pi][bounds[pi][:,1].argmin()] = np.array([gamma if pi == 0 else R[pi - 1], CurrScore[0]])

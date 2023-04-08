@@ -1,3 +1,6 @@
 start program
-2023-04-07 16:48:04.782326
-0.000-0.862	gamma: 0.0001	win reward: 10	loss reward: -10	tie reward: 0/tdefault reward: 0
+2023-04-07 16:56:07.864894
+0.000-0.844	gamma: 0.0001	win reward: 10	loss reward: -10	tie reward: 0	default reward: 0
+0.844-0.903	gamma: 5e-05	win reward: 10	loss reward: -10	tie reward: 0	default reward: 0
+0.903-0.904	gamma: 7.500000000000001e-05	win reward: 10	loss reward: -10	tie reward: 0	default reward: 0
+0.904-0.920	gamma: 6.25e-05	win reward: 10	loss reward: -10	tie reward: 0	default reward: 0

@@ -1,1 +1,8 @@
-win rate: 0.862	loss rate: 0.101	tie rate: 0.037
+win rate: 0.844	loss rate: 0.115	tie rate: 0.041
+win rate: 0.831	loss rate: 0.121	tie rate: 0.048
+win rate: 0.903	loss rate: 0.052	tie rate: 0.045
+win rate: 0.897	loss rate: 0.062	tie rate: 0.041
+win rate: 0.904	loss rate: 0.065	tie rate: 0.031
+win rate: 0.867	loss rate: 0.089	tie rate: 0.044
+win rate: 0.890	loss rate: 0.058	tie rate: 0.052
+win rate: 0.920	loss rate: 0.040	tie rate: 0.040
