@@ -14,14 +14,14 @@ def Experiment():
     P = random.gauss(0.5, 0.25)
     pi = i / 10 % bounds.shape[0]
     if pi < 0.2:
-        gamma = 0.00001 if pi == 0 else 0.99999
+        gamma = max(0, min(gamma + (-1 if pi == 0 else 1) * 0.499999 * 0.99**i, 1))
         if pi == 0:
             Print()
             bounds[int(pi)] = np.zeros([2, 2])
     elif int(pi) == 0:
         gamma = max(0, min(P * bounds[0][0][0] + (1 - P) * bounds[0][1][0], 1))
     #elif pi % 1 < 0.2:
-    #    R[int(pi) - 1] = 100 * (-1 if pi % 1 else 1)
+    #    R[int(pi) - 1] = max(-999, R[int(pi) - 1] + (-1 if pi % 1 else 1) * 100 * 0.99**i)
     #else:
     #    R[int(pi) - 1] = max(-999, P * bounds[int(pi)][0][0] + (1 - P) * bounds[int(pi)][1][0])
 
