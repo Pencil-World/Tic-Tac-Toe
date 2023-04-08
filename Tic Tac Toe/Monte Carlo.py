@@ -1,7 +1,6 @@
 from Board import Board
 import datetime
 import json
-from tensorflow import keras
 import numpy as np
 import random
 
@@ -11,22 +10,23 @@ def Clear():
     open('log.txt', 'w').close()
 
 def Experiment():
-    global gamma, R
+    global gamma
     P = random.gauss(0.5, 0.25)
     pi = i / 10 % bounds.shape[0]
     if pi < 0.2:
         gamma = 0.00001 if pi == 0 else 0.99999
         if pi == 0:
             Print()
+            bounds[int(pi)] = np.zeros([2, 2])
     elif int(pi) == 0:
         gamma = max(0, min(P * bounds[0][0][0] + (1 - P) * bounds[0][1][0], 1))
     #elif pi % 1 < 0.2:
     #    R[int(pi) - 1] = 100 * (-1 if pi % 1 else 1)
     #else:
-    #    R[int(pi) - 1] = p * bounds[int(pi)][0][0] + (1 - p) * bounds[int(pi)][1][0]
+    #    R[int(pi) - 1] = P * bounds[int(pi)][0][0] + (1 - P) * bounds[int(pi)][1][0]
 
     pi = int(pi)
-    return [bounds[pi][bounds[pi][:,1].argmin(), bounds[pi][:,1].argmin() + 1], gamma if pi == 0 else R[pi - 1]]
+    return [bounds[pi][bounds[pi][:,1].argmin():bounds[pi][:,1].argmin() + 1], gamma if pi == 0 else R[pi - 1]]
 
 def NewRecord():
     global HighScore
@@ -39,7 +39,7 @@ def NewRecord():
 def Print():
     with open('debugger.txt', 'a') as debugger:
         debugger.write("Saving Data\n")
-        debugger.write(f"time: {datetime.datetime.now()}\ti: {i}\tbounds: {str(bounds.tolist())}")
+        debugger.write(f"time: {datetime.datetime.now()}\ti: {i}\tbounds: {str(bounds.tolist())}\n")
 
 def Test():
     print("\nTest")
@@ -115,7 +115,7 @@ for i in range(data_size):
 
     CurrScore /= episodes
     open('log.txt', 'a').write(f"win rate: {CurrScore[0]:.3f}\tloss rate: {CurrScore[1]:.3f}\ttie rate: {CurrScore[2]:.3f}\n")
-    if target[0][0] < CurrScore[0]:
-        target[0][0] = [target[1], CurrScore[0]] # set previous target to new target
+    if target[0][0][1] < CurrScore[0]: # [1] retreives the win rate of the lowest bound. [0] retreives the value of the lowest bound
+        target[0][0] = [target[1], CurrScore[0]] # replaces the lowest bound with a higher win rate value. [0] captures the slice by reference
     if HighScore[0] < CurrScore[0]:
         NewRecord()
