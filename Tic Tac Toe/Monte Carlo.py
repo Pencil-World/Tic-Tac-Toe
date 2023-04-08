@@ -23,7 +23,7 @@ def Experiment():
     #elif pi % 1 < 0.2:
     #    R[int(pi) - 1] = 100 * (-1 if pi % 1 else 1)
     #else:
-    #    R[int(pi) - 1] = P * bounds[int(pi)][0][0] + (1 - P) * bounds[int(pi)][1][0]
+    #    R[int(pi) - 1] = max(-999, P * bounds[int(pi)][0][0] + (1 - P) * bounds[int(pi)][1][0])
 
     pi = int(pi)
     return [bounds[pi][bounds[pi][:,1].argmin():bounds[pi][:,1].argmin() + 1], gamma if pi == 0 else R[pi - 1]]
