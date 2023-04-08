@@ -26,13 +26,10 @@
     <Compile Include="Multi-Agent.py" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="buffer.json" />
     <Content Include="debugger.txt" />
     <Content Include="log.txt" />
-    <Content Include="model.h5" />
-    <Content Include="data.json" />
     <Content Include="model.json" />
-    <Content Include="The One.h5" />
+    <Content Include="The Apex.json" />
     <Content Include="The One.json" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

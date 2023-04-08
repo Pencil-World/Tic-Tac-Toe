@@ -11,17 +11,17 @@ def Clear():
 
 def Experiment():
     global gamma
-    P = random.gauss(0.5, 0.25)
+    P = random.gauss(0.5, 0.15)
     pi = i / 10 % bounds.shape[0]
     if pi < 0.2:
-        gamma = max(0, min(gamma + (-1 if pi == 0 else 1) * 0.499999 * 0.99**i, 1))
+        gamma = max(0, min(gamma + (-1 if pi == 0 else 1) * 0.5 * 0.999**i, 1))
         if pi == 0:
             Print()
             bounds[int(pi)] = np.zeros([2, 2])
     elif int(pi) == 0:
         gamma = max(0, min(P * bounds[0][0][0] + (1 - P) * bounds[0][1][0], 1))
     #elif pi % 1 < 0.2:
-    #    R[int(pi) - 1] = max(-999, R[int(pi) - 1] + (-1 if pi % 1 else 1) * 100 * 0.99**i)
+    #    R[int(pi) - 1] = max(-999, R[int(pi) - 1] + (-1 if pi % 1 else 1) * 100 * 0.999**i)
     #else:
     #    R[int(pi) - 1] = max(-999, P * bounds[int(pi)][0][0] + (1 - P) * bounds[int(pi)][1][0])
 
@@ -31,7 +31,7 @@ def Experiment():
 def NewRecord():
     global HighScore
     with open('debugger.txt', 'a') as debugger:
-        debugger.write(f"{HighScore[0]:.3f}-{CurrScore[0]:.3f}\tgamma: {gamma}\twin reward: {R[0]}\tloss reward: {R[1]}\ttie reward: {R[2]}\tdefault reward: {R[3]}\n")
+        debugger.write(f"{HighScore[0]:.3f}-{CurrScore[0]:.3f}\tgamma: {gamma:.3f}\twin reward: {R[0]}\tloss reward: {R[1]}\ttie reward: {R[2]}\tdefault reward: {R[3]}\n")
     HighScore = CurrScore
     JSON = dict(zip(QTable.keys(), [repr(elem.tolist()) for elem in QTable.values()])) # works for jagged arrays. includes commas
     json.dump(JSON, open('model.json', 'w'), indent = 4)
@@ -61,7 +61,7 @@ def Test():
             state = Board()
             ModelTurn = True
 
-alpha = 0.00001
+alpha = 0.0001
 gamma = 0.5
 episodes = 1_000
 data_size = 1_000

@@ -37,7 +37,7 @@ def Test():
             state = Board()
             ModelTurn = True
 
-alpha = 0.00001
+alpha = 0.0001
 gamma = 0.5
 episodes = 1_000
 data_size = 1_000
