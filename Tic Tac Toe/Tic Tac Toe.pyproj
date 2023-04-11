@@ -23,13 +23,11 @@
   <ItemGroup>
     <Compile Include="Board.py" />
     <Compile Include="Monte Carlo.py" />
-    <Compile Include="Multi-Agent.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="debugger.txt" />
     <Content Include="log.txt" />
     <Content Include="model.json" />
-    <Content Include="The Apex.json" />
     <Content Include="The One.json" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
