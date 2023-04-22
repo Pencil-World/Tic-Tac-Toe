@@ -71,7 +71,7 @@ R = [10, -10, 0, 0] # win reward, lose reward, tie reward, default reward
 bounds = np.zeros([1, 2, 2]) # includes gamma as the 0th element
 
 #open('The One.json', 'w').write(open('model.json').read())
-Test()
+#Test()
 Clear()
 
 state = Board()
